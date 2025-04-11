@@ -10,7 +10,7 @@
     <div class="ebook-content">
         <div class="ebook-page">
             <div class="ebook-text">
-                <%= data && data.co2.replace(/\n/g, '<br>') %>
+                <%= data && data.co2 %>
             </div>
         </div>
     </div>
@@ -49,6 +49,7 @@
         padding: 30px;
         box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         min-height: 60vh;
+        white-space: pre-wrap; /* Mantiene los saltos de línea originales */
     }
 
     .ebook-text {
