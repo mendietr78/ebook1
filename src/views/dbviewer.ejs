@@ -9,7 +9,7 @@
 
     <div class="ebook-content">
         <div class="ebook-page">
-            <div class="ebook-text">
+            <div id="readable-content" class="ebook-text">
                 <%= data && data.co2 %>
             </div>
         </div>
@@ -19,11 +19,17 @@
         <button class="btn btn-primary" onclick="adjustFontSize('increase')">Aumentar texto</button>
         <button class="btn btn-secondary" onclick="adjustFontSize('decrease')">Disminuir texto</button>
         <button class="btn btn-dark" onclick="toggleDarkMode()">Modo oscuro</button>
+        <button id="readBtn" class="btn btn-success" onclick="readAloud()">Leer en voz alta</button>
+        <button id="stopBtn" class="btn btn-danger" onclick="stopReading()" style="display: none;">Detener lectura</button>
+        <button id="readBtn" class="btn btn-success" onclick="readAloud()">Leer en voz alta</button>
+<button id="pauseBtn" class="btn btn-warning" onclick="pauseReading()" style="display: none;">Pausar</button>
+<button id="resumeBtn" class="btn btn-info" onclick="resumeReading()" style="display: none;">Reanudar</button>
+<button id="stopBtn" class="btn btn-danger" onclick="stopReading()" style="display: none;">Detener</button>
+
     </div>
 </div>
 
 <style>
-    /* Estilos para el eBook responsive */
     .ebook-container {
         max-width: 800px;
         margin: 0 auto;
@@ -49,7 +55,7 @@
         padding: 30px;
         box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         min-height: 60vh;
-        white-space: pre-wrap; /* Mantiene los saltos de línea originales */
+        white-space: pre-wrap;
     }
 
     .ebook-text {
@@ -66,7 +72,6 @@
         flex-wrap: wrap;
     }
 
-    /* Modo oscuro */
     .dark-mode {
         background-color: #222;
         color: #eee;
@@ -81,20 +86,21 @@
         color: #eee;
     }
 
-    /* Responsive design */
+    .highlight {
+        background-color: yellow;
+        font-weight: bold;
+    }
+
     @media (max-width: 768px) {
         .ebook-container {
             padding: 10px;
         }
-        
         .ebook-content {
             padding: 15px;
         }
-        
         .ebook-title {
             font-size: 1.5rem;
         }
-        
         .ebook-text {
             font-size: 1rem;
         }
@@ -102,22 +108,86 @@
 </style>
 
 <script>
-    // Funciones para controlar el eBook
+    // Aumentar / Disminuir tamaño de fuente
     function adjustFontSize(action) {
         const textElement = document.querySelector('.ebook-text');
         let currentSize = parseFloat(window.getComputedStyle(textElement).fontSize);
-        
+
         if (action === 'increase') {
             textElement.style.fontSize = (currentSize + 2) + 'px';
-        } else {
-            if (currentSize > 12) {
-                textElement.style.fontSize = (currentSize - 2) + 'px';
-            }
+        } else if (currentSize > 12) {
+            textElement.style.fontSize = (currentSize - 2) + 'px';
         }
     }
-    
+
+    // Modo oscuro
     function toggleDarkMode() {
         document.body.classList.toggle('dark-mode');
+    }
+
+    // Lectura en voz alta con resaltado
+    let speechSynthesisObj = window.speechSynthesis;
+    let utterance = null;
+    let originalContent = '';
+
+    function readAloud() {
+        const content = document.getElementById('readable-content');
+        originalContent = content.innerHTML;
+
+        stopReading(); // Detener si ya hay algo leyendo
+
+        utterance = new SpeechSynthesisUtterance(content.textContent);
+        utterance.lang = 'es-ES';
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+
+        utterance.onstart = () => {
+            document.getElementById('readBtn').style.display = 'none';
+            document.getElementById('stopBtn').style.display = 'inline-block';
+        };
+
+        utterance.onend = () => {
+            document.getElementById('readBtn').style.display = 'inline-block';
+            document.getElementById('stopBtn').style.display = 'none';
+            content.innerHTML = originalContent;
+        };
+
+        utterance.onboundary = (event) => {
+            if (event.name === 'word') {
+                const text = content.textContent;
+                const wordStart = event.charIndex;
+                let wordEnd = wordStart;
+
+                while (wordEnd < text.length && !/\s/.test(text[wordEnd])) {
+                    wordEnd++;
+                }
+
+                const word = text.substring(wordStart, wordEnd);
+                if (word.length > 0) {
+                    const safeWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // escape regex
+                    const newContent = originalContent.replace(
+                        new RegExp(`\\b${safeWord}\\b`, 'g'),
+                        `<span class="highlight">${word}</span>`
+                    );
+                    content.innerHTML = newContent;
+                }
+            }
+        };
+
+        speechSynthesisObj.speak(utterance);
+    }
+
+    function stopReading() {
+        if (speechSynthesisObj.speaking) {
+            speechSynthesisObj.cancel();
+            document.getElementById('readBtn').style.display = 'inline-block';
+            document.getElementById('stopBtn').style.display = 'none';
+
+            const content = document.getElementById('readable-content');
+            if (originalContent) {
+                content.innerHTML = originalContent;
+            }
+        }
     }
 </script>
 
